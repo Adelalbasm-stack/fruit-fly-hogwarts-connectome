@@ -1,0 +1,155 @@
+"""Animated watch window for the fruit-fly Hogwarts-inspired simulation."""
+
+from __future__ import annotations
+
+import numpy as np
+import matplotlib
+matplotlib.use("TkAgg")
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+from matplotlib.patches import Circle, Polygon, Rectangle
+
+
+class FlyCastleAnimator:
+    def __init__(self):
+        self.fig, self.ax = plt.subplots(figsize=(16, 9), facecolor="#111111")
+        self.fig.patch.set_facecolor("#111111")
+        self.ax.set_facecolor("#0d0d1a")
+        self.ax.set_xlim(-2, 2)
+        self.ax.set_ylim(-1.5, 1.5)
+        self.ax.set_aspect("equal")
+        self.ax.axis("off")
+        plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+
+        self.castle_walls = []
+        self.build_castle()
+
+        self.fly_body = Circle((0.0, 0.0), 0.18, color="#d9d9d9", ec="black", lw=1.2)
+        self.fly_head = Circle((0.25, 0.0), 0.09, color="#f2f2f2", ec="black", lw=1.0)
+        self.wing_left = Circle((-0.12, 0.18), 0.15, color="#c7d4ff", alpha=0.5, ec="none")
+        self.wing_right = Circle((-0.12, -0.18), 0.15, color="#c7d4ff", alpha=0.5, ec="none")
+        self.eye_left = Circle((0.28, 0.05), 0.025, color="#111111")
+        self.eye_right = Circle((0.28, -0.05), 0.025, color="#111111")
+
+        self.ax.add_patch(self.fly_body)
+        self.ax.add_patch(self.fly_head)
+        self.ax.add_patch(self.wing_left)
+        self.ax.add_patch(self.wing_right)
+        self.ax.add_patch(self.eye_left)
+        self.ax.add_patch(self.eye_right)
+
+        self.sound_line, = self.ax.plot([], [], color="#ff4d4d", lw=2)
+        self.sound_fill = self.ax.fill_between([], [], color="#ff4d4d", alpha=0.18)
+
+        self.label = self.ax.text(
+            -1.7, 1.2,
+            "Hogwarts-style sensory overload",
+            fontsize=14,
+            color="#f4d35e",
+            weight="bold",
+        )
+
+        self.status = self.ax.text(
+            0.6, 1.2,
+            "Bad Apple + death metal loop",
+            fontsize=11,
+            color="#ffffff",
+            weight="bold",
+        )
+
+        self.replay = self.ax.text(
+            0.75, -1.2,
+            "audio replay: instant / endless",
+            fontsize=10,
+            color="#90caf9",
+        )
+
+        self.fullscreen = False
+        self.fig.canvas.mpl_connect("key_press_event", self.on_key_press)
+
+    def build_castle(self):
+        for x in (-1.7, -0.8, 0.1, 1.0):
+            tower = Polygon(
+                [(x - 0.18, -0.55), (x + 0.18, -0.55), (x + 0.28, 0.7), (x - 0.28, 0.7)],
+                closed=True,
+                facecolor="#d0d9ef",
+                edgecolor="#b7bfd7",
+                lw=1,
+            )
+            self.ax.add_patch(tower)
+            self.castle_walls.append(tower)
+
+        wall_base = Rectangle((-2.1, -0.8), 4.2, 0.9, facecolor="#c0c9de", edgecolor="#9aa5c3")
+        self.ax.add_patch(wall_base)
+
+        gate = Rectangle((-0.45, -0.8), 0.9, 0.5, facecolor="#7e5a3b", edgecolor="#56402a")
+        self.ax.add_patch(gate)
+
+    def apply_fullscreen(self):
+        manager = plt.get_current_fig_manager()
+        if manager is None:
+            return
+
+        try:
+            if hasattr(manager, "window"):
+                try:
+                    manager.window.attributes("-fullscreen", self.fullscreen)
+                except Exception:
+                    pass
+                try:
+                    if self.fullscreen:
+                        manager.window.state("zoomed")
+                    else:
+                        manager.window.state("normal")
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    def on_key_press(self, event):
+        if event.key.lower() == "f":
+            self.fullscreen = not self.fullscreen
+            self.apply_fullscreen()
+        elif event.key.lower() == "escape":
+            self.fullscreen = False
+            self.apply_fullscreen()
+
+    def update(self, frame):
+        t = frame / 12.0
+
+        x = 0.7 * np.sin(t * 1.7)
+        y = 0.45 * np.cos(t * 2.6)
+        self.fly_body.center = (x, y)
+        self.fly_head.center = (x + 0.25, y)
+        self.wing_left.center = (x - 0.12, y + 0.18)
+        self.wing_right.center = (x - 0.12, y - 0.18)
+        self.wing_left.radius = 0.14 + 0.03 * np.sin(t * 12)
+        self.wing_right.radius = 0.14 + 0.03 * np.sin(t * 12 + 0.6)
+
+        xs = np.linspace(-1.8, 1.8, 120)
+        amp = 0.23 * (np.sin(8 * xs + t * 6) + 0.6 * np.sin(22 * xs - t * 7))
+        intens = 0.35 + 0.65 * (1 + np.sin(t * 18)) / 2
+        ys = intens * amp
+
+        self.sound_line.set_data(xs, ys)
+        self.sound_fill.remove()
+        self.sound_fill = self.ax.fill_between(xs, ys, 0, color="#ff4d4d", alpha=0.22)
+
+        glow = 0.5 + 0.5 * np.sin(t * 15)
+        for tower in self.castle_walls:
+            tower.set_alpha(0.8 + 0.2 * glow)
+
+        self.status.set_text(f"audio pressure: {glow * 100:.0f}%")
+        self.replay.set_text("audio replay: instant / endless")
+        return [self.fly_body, self.fly_head, self.wing_left, self.wing_right, self.eye_left, self.eye_right, self.sound_line]
+
+
+def main():
+    animator = FlyCastleAnimator()
+    animator.apply_fullscreen()
+    ani = FuncAnimation(animator.fig, animator.update, frames=400, interval=30, blit=False)
+    plt.show()
+
+
+if __name__ == "__main__":
+    main()

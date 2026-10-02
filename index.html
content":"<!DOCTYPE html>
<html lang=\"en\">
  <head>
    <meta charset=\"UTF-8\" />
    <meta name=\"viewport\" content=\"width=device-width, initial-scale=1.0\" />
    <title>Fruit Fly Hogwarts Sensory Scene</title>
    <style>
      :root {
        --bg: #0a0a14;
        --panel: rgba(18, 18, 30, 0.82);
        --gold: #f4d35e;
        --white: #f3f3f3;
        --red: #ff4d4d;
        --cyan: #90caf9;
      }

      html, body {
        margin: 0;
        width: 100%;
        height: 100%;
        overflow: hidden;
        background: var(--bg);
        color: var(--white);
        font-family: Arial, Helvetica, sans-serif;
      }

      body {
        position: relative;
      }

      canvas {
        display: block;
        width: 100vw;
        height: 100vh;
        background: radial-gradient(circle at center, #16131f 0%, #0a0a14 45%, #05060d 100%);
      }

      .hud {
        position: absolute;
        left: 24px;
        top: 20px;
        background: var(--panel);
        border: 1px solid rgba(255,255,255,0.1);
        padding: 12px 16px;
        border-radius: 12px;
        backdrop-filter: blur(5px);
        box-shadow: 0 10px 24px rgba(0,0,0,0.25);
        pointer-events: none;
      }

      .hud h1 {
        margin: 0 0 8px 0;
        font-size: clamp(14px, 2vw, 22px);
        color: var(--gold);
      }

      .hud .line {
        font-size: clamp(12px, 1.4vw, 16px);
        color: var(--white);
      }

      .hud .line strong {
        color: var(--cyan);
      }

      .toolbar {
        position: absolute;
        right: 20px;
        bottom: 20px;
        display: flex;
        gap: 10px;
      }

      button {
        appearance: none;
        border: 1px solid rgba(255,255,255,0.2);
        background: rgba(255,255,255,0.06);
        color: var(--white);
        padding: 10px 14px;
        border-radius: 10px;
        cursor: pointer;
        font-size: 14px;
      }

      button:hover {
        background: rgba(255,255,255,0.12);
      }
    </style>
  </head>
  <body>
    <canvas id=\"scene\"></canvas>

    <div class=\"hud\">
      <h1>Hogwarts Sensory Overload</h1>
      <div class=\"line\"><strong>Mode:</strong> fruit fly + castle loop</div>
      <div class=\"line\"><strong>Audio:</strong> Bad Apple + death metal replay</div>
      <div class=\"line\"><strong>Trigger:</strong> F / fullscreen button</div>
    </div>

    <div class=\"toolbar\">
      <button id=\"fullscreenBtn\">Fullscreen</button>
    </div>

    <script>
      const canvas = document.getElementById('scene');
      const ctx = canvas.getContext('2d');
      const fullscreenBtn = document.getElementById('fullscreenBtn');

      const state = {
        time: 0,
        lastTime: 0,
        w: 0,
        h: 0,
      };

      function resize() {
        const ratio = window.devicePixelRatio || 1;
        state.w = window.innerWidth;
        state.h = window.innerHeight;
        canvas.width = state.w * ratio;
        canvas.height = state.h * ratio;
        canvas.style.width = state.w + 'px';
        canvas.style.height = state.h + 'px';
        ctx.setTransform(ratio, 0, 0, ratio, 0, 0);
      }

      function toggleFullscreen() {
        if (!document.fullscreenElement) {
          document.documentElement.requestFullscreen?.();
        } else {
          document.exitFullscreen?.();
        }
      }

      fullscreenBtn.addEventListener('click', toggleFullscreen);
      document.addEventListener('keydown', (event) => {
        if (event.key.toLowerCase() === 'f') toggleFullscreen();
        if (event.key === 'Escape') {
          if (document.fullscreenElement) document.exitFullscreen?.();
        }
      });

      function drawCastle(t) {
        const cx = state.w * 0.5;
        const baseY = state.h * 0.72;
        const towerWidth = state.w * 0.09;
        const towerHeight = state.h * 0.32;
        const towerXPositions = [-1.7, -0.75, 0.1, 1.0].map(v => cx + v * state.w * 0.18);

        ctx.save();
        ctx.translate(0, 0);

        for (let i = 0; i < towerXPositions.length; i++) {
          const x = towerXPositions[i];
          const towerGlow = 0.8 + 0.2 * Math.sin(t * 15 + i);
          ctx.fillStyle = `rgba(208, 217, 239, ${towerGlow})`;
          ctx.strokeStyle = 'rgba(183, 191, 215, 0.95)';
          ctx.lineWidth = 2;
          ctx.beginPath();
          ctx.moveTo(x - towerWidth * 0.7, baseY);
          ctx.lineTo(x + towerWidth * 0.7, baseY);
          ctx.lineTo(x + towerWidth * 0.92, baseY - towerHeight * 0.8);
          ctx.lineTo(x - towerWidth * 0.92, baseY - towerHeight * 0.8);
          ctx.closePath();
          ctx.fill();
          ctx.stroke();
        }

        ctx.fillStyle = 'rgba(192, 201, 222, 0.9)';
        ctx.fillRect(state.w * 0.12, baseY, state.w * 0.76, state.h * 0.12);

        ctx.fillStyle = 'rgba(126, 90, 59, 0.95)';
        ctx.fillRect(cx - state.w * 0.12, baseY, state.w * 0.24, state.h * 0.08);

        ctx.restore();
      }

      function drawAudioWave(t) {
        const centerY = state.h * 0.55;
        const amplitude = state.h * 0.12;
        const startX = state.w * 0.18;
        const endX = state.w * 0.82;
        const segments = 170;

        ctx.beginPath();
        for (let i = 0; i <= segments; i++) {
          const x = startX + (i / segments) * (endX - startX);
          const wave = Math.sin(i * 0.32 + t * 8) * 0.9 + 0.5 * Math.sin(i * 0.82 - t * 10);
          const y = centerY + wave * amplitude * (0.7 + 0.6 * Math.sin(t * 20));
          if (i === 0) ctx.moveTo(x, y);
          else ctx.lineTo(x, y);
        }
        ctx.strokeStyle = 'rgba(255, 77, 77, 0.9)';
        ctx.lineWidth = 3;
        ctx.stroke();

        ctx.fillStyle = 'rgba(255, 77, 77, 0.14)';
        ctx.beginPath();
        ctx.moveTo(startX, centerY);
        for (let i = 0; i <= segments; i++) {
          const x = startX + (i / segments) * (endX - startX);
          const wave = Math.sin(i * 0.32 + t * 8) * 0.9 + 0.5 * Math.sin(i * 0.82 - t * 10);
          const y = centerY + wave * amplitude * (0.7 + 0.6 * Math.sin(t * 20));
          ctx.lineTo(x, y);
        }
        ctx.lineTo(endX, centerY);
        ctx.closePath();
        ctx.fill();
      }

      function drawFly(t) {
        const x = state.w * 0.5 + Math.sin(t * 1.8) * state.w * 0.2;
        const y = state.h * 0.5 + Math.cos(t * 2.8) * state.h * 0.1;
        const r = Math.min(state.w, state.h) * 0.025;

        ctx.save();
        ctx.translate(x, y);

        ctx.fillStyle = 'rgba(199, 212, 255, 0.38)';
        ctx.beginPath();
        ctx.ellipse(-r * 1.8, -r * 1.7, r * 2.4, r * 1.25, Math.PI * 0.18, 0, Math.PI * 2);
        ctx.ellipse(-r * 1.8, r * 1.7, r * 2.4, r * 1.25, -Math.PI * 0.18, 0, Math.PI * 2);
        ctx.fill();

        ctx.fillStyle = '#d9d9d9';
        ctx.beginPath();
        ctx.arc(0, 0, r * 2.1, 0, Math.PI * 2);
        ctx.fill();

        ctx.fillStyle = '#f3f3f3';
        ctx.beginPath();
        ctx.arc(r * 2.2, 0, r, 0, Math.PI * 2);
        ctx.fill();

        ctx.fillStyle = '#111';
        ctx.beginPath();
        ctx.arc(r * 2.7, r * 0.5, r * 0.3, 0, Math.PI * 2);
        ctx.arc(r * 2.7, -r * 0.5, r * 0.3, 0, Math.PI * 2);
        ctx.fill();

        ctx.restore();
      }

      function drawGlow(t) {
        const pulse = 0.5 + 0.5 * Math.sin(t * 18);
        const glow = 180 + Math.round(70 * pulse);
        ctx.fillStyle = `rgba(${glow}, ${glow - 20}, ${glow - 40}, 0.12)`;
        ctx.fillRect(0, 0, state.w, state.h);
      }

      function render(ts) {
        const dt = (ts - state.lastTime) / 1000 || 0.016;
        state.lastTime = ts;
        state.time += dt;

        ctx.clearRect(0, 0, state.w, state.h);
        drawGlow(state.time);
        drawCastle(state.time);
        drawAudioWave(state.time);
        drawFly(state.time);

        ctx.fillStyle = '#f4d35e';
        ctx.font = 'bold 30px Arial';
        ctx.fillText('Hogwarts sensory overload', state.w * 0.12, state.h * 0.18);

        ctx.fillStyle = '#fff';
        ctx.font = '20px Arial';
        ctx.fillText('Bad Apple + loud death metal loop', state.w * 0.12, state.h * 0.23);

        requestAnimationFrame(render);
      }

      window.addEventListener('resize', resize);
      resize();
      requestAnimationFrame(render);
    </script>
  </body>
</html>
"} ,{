@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fruit Fly Hogwarts Sensory Scene</title>
+    <style>
+      :root {
+        --bg: #0a0a14;
+        --panel: rgba(18, 18, 30, 0.82);
+        --gold: #f4d35e;
+        --white: #f3f3f3;
+        --red: #ff4d4d;
+        --cyan: #90caf9;
+      }
+
+      html, body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--white);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      body {
+        position: relative;
+      }
+
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        background: radial-gradient(circle at center, #16131f 0%, #0a0a14 45%, #05060d 100%);
+      }
+
+      .hud {
+        position: absolute;
+        left: 24px;
+        top: 20px;
+        background: var(--panel);
+        border: 1px solid rgba(255,255,255,0.1);
+        padding: 12px 16px;
+        border-radius: 12px;
+        backdrop-filter: blur(5px);
+        box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+        pointer-events: none;
+      }
+
+      .hud h1 {
+        margin: 0 0 8px 0;
+        font-size: clamp(14px, 2vw, 22px);
+        color: var(--gold);
+      }
+
+      .hud .line {
+        font-size: clamp(12px, 1.4vw, 16px);
+        color: var(--white);
+      }
+
+      .hud .line strong {
+        color: var(--cyan);
+      }
+
+      .toolbar {
+        position: absolute;
+        right: 20px;
+        bottom: 20px;
+        display: flex;
+        gap: 10px;
+      }
+
+      button {
+        appearance: none;
+        border: 1px solid rgba(255,255,255,0.2);
+        background: rgba(255,255,255,0.06);
+        color: var(--white);
+        padding: 10px 14px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      button:hover {
+        background: rgba(255,255,255,0.12);
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+
+    <div class="hud">
+      <h1>Hogwarts Sensory Overload</h1>
+      <div class="line"><strong>Mode:</strong> fruit fly + castle loop</div>
+      <div class="line"><strong>Audio:</strong> Bad Apple + death metal replay</div>
+      <div class="line"><strong>Trigger:</strong> F / fullscreen button</div>
+    </div>
+
+    <div class="toolbar">
+      <button id="fullscreenBtn">Fullscreen</button>
+    </div>
+
+    <script>
+      const canvas = document.getElementById('scene');
+      const ctx = canvas.getContext('2d');
+      const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+      const state = {
+        time: 0,
+        lastTime: 0,
+        w: 0,
+        h: 0,
+      };
+
+      function resize() {
+        const ratio = window.devicePixelRatio || 1;
+        state.w = window.innerWidth;
+        state.h = window.innerHeight;
+        canvas.width = state.w * ratio;
+        canvas.height = state.h * ratio;
+        canvas.style.width = state.w + 'px';
+        canvas.style.height = state.h + 'px';
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      }
+
+      function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen?.();
+        } else {
+          document.exitFullscreen?.();
+        }
+      }
+
+      fullscreenBtn.addEventListener('click', toggleFullscreen);
+      document.addEventListener('keydown', (event) => {
+        if (event.key.toLowerCase() === 'f') toggleFullscreen();
+        if (event.key === 'Escape') {
+          if (document.fullscreenElement) document.exitFullscreen?.();
+        }
+      });
+
+      function drawCastle(t) {
+        const cx = state.w * 0.5;
+        const baseY = state.h * 0.72;
+        const towerWidth = state.w * 0.09;
+        const towerHeight = state.h * 0.32;
+        const towerXPositions = [-1.7, -0.75, 0.1, 1.0].map(v => cx + v * state.w * 0.18);
+
+        ctx.save();
+        ctx.translate(0, 0);
+
+        for (let i = 0; i < towerXPositions.length; i++) {
+          const x = towerXPositions[i];
+          const towerGlow = 0.8 + 0.2 * Math.sin(t * 15 + i);
+          ctx.fillStyle = `rgba(208, 217, 239, ${towerGlow})`;
+          ctx.strokeStyle = 'rgba(183, 191, 215, 0.95)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x - towerWidth * 0.7, baseY);
+          ctx.lineTo(x + towerWidth * 0.7, baseY);
+          ctx.lineTo(x + towerWidth * 0.92, baseY - towerHeight * 0.8);
+          ctx.lineTo(x - towerWidth * 0.92, baseY - towerHeight * 0.8);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = 'rgba(192, 201, 222, 0.9)';
+        ctx.fillRect(state.w * 0.12, baseY, state.w * 0.76, state.h * 0.12);
+
+        ctx.fillStyle = 'rgba(126, 90, 59, 0.95)';
+        ctx.fillRect(cx - state.w * 0.12, baseY, state.w * 0.24, state.h * 0.08);
+
+        ctx.restore();
+      }
+
+      function drawAudioWave(t) {
+        const centerY = state.h * 0.55;
+        const amplitude = state.h * 0.12;
+        const startX = state.w * 0.18;
+        const endX = state.w * 0.82;
+        const segments = 170;
+
+        ctx.beginPath();
+        for (let i = 0; i <= segments; i++) {
+          const x = startX + (i / segments) * (endX - startX);
+          const wave = Math.sin(i * 0.32 + t * 8) * 0.9 + 0.5 * Math.sin(i * 0.82 - t * 10);
+          const y = centerY + wave * amplitude * (0.7 + 0.6 * Math.sin(t * 20));
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = 'rgba(255, 77, 77, 0.9)';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(255, 77, 77, 0.14)';
+        ctx.beginPath();
+        ctx.moveTo(startX, centerY);
+        for (let i = 0; i <= segments; i++) {
+          const x = startX + (i / segments) * (endX - startX);
+          const wave = Math.sin(i * 0.32 + t * 8) * 0.9 + 0.5 * Math.sin(i * 0.82 - t * 10);
+          const y = centerY + wave * amplitude * (0.7 + 0.6 * Math.sin(t * 20));
+          ctx.lineTo(x, y);
+        }
+        ctx.lineTo(endX, centerY);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function drawFly(t) {
+        const x = state.w * 0.5 + Math.sin(t * 1.8) * state.w * 0.2;
+        const y = state.h * 0.5 + Math.cos(t * 2.8) * state.h * 0.1;
+        const r = Math.min(state.w, state.h) * 0.025;
+
+        // wing motion
+        const wingLift = 0.22 + 0.18 * Math.sin(t * 16);
+
+        ctx.save();
+        ctx.translate(x, y);
+
+        ctx.fillStyle = 'rgba(199, 212, 255, 0.38)';
+        ctx.beginPath();
+        ctx.ellipse(-r * 1.8, -r * 1.7, r * 2.4, r * 1.25, Math.PI * 0.18, 0, Math.PI * 2);
+        ctx.ellipse(-r * 1.8, r * 1.7, r * 2.4, r * 1.25, -Math.PI * 0.18, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#d9d9d9';
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 2.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#f3f3f3';
+        ctx.beginPath();
+        ctx.arc(r * 2.2, 0, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        ctx.arc(r * 2.7, r * 0.5, r * 0.3, 0, Math.PI * 2);
+        ctx.arc(r * 2.7, -r * 0.5, r * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      function drawGlow(t) {
+        const pulse = 0.5 + 0.5 * Math.sin(t * 18);
+        const glow = 180 + Math.round(70 * pulse);
+        ctx.fillStyle = `rgba(${glow}, ${glow - 20}, ${glow - 40}, 0.12)`;
+        ctx.fillRect(0, 0, state.w, state.h);
+      }
+
+      function render(ts) {
+        const dt = (ts - state.lastTime) / 1000 || 0.016;
+        state.lastTime = ts;
+        state.time += dt;
+
+        ctx.clearRect(0, 0, state.w, state.h);
+        drawGlow(state.time);
+        drawCastle(state.time);
+        drawAudioWave(state.time);
+        drawFly(state.time);
+
+        ctx.fillStyle = '#f4d35e';
+        ctx.font = 'bold 30px Arial';
+        ctx.fillText('Hogwarts sensory overload', state.w * 0.12, state.h * 0.18);
+
+        ctx.fillStyle = '#fff';
+        ctx.font = '20px Arial';
+        ctx.fillText('Bad Apple + loud death metal loop', state.w * 0.12, state.h * 0.23);
+
+        requestAnimationFrame(render);
+      }
+
+      window.addEventListener('resize', resize);
+      resize();
+      requestAnimationFrame(render);
+    </script>
+  </body>
+</html>
